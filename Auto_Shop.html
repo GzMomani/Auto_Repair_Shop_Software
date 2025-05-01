@@ -1,801 +1,904 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>🚗 Auto Repair Shop Dashboard - v2</title>
+  <meta charset="UTF-8">
+  <title>🚗 Auto Repair Shop Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Bootstrap 5 -->
+  <!-- Bootstrap 5 & FontAwesome -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Font Awesome Icons -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
-    body { background-color: #f7f9fc; font-family: 'Segoe UI'; }
-    .card { margin-bottom: 20px; }
-    .table th, .table td { vertical-align: middle; }
-    .tab-content { padding: 20px 0; }
-    pre { background: #f4f4f4; padding: 10px; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word; }
+    :root {
+      --sidebar-closed: 56px;
+      --sidebar-open: 200px;
+    }
+    body { background: #f0f2f5; }
+    #sidebar {
+      position: fixed; top: 0; left: 0; bottom: 0;
+      width: var(--sidebar-closed);
+      background: #343a40; color: #adb5bd;
+      transition: width .2s; overflow-x: hidden;
+    }
+    #sidebar.expanded { width: var(--sidebar-open); }
+    #sidebar .nav-link {
+      color: inherit; padding: .75rem 1rem; display: flex; align-items: center;
+    }
+    #sidebar .link-text { display: none; margin-left: .5rem; }
+    #sidebar.expanded .link-text { display: inline; }
+    #sidebar .nav-link:hover, #sidebar .nav-link.active {
+      background: #495057; color: #fff;
+    }
+    #sidebar .form-control {
+      background: #495057; color: #fff; border: none; margin: .5rem 1rem;
+      width: calc(var(--sidebar-closed) - 2rem); transition: width .2s;
+    }
+    #sidebar.expanded .form-control { width: calc(var(--sidebar-open) - 2rem); }
+    #main { margin-left: var(--sidebar-closed); transition: margin-left .2s; }
+    #sidebar.expanded ~ #main { margin-left: var(--sidebar-open); }
+    #main .container { max-width: 960px; }
+    .table th { cursor: pointer; }
+    .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 1055; }
+    .summary-card { border-radius: .5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    .signature {
+      position: fixed; bottom: 8px; right: 8px;
+      font-size: 0.7rem; color: #555; opacity: 0.5;
+    }
   </style>
 </head>
 <body>
-  <div class="container py-4">
-    <h1 class="text-center text-primary mb-4"><i class="fas fa-car-repair"></i> Auto Repair Shop Dashboard</h1>
 
-    <!-- Tabs Navigation -->
-    <ul class="nav nav-tabs" id="myTab" role="tablist">
-      <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="customers-tab" data-bs-toggle="tab" data-bs-target="#customers">Customers</button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="vehicles-tab" data-bs-toggle="tab" data-bs-target="#vehicles">Vehicles</button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders">Work Orders</button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="diagnostics-tab" data-bs-toggle="tab" data-bs-target="#diagnostics">Diagnostics</button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="invoices-tab" data-bs-toggle="tab" data-bs-target="#invoices">Invoices</button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports">Reports</button>
-      </li>
+  <!-- Sidebar -->
+  <nav id="sidebar" class="d-flex flex-column">
+    <button id="toggleBtn" class="btn btn-dark m-2"><i class="fas fa-bars"></i></button>
+    <input id="globalSearch" class="form-control form-control-sm" placeholder="Search...">
+    <ul class="nav nav-pills flex-column mb-auto mt-2" id="menu">
+      <li class="nav-item"><a href="#" class="nav-link active" data-tab="dashboard"><i class="fas fa-chart-pie"></i><span class="link-text">Dashboard</span></a></li>
+      <li class="nav-item"><a href="#" class="nav-link" data-tab="customers"><i class="fas fa-user-friends"></i><span class="link-text">Customers</span></a></li>
+      <li class="nav-item"><a href="#" class="nav-link" data-tab="vehicles"><i class="fas fa-car"></i><span class="link-text">Vehicles</span></a></li>
+      <li class="nav-item"><a href="#" class="nav-link" data-tab="orders"><i class="fas fa-tools"></i><span class="link-text">Work Orders</span></a></li>
+      <li class="nav-item"><a href="#" class="nav-link" data-tab="diagnostics"><i class="fas fa-microchip"></i><span class="link-text">Diagnostics</span></a></li>
+      <li class="nav-item"><a href="#" class="nav-link" data-tab="invoices"><i class="fas fa-file-invoice-dollar"></i><span class="link-text">Invoices</span></a></li>
+      <li class="nav-item"><a href="#" class="nav-link" data-tab="reports"><i class="fas fa-file-alt"></i><span class="link-text">Reports</span></a></li>
+      <li class="nav-item mt-3"><a href="#" class="nav-link" data-tab="export"><i class="fas fa-file-export"></i><span class="link-text">Export</span></a></li>
     </ul>
+  </nav>
 
-    <!-- Tab Content -->
-    <div class="tab-content" id="myTabContent">
-      <!-- CUSTOMERS TAB -->
-      <div class="tab-pane fade show active" id="customers" role="tabpanel">
-        <div class="card mt-3">
-          <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <span><i class="fas fa-user-friends"></i> Customers</span>
-            <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addCustomerModal"><i class="fas fa-plus"></i> Add Customer</button>
+  <!-- Main Content -->
+  <div id="main">
+    <div class="container py-4">
+
+      <!-- Dashboard Summary -->
+      <div id="tab-dashboard" class="tab-section">
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <div class="p-3 bg-white summary-card text-center">
+              <h5>Total Customers</h5>
+              <p id="sumCustomers" class="fs-3 mb-0">0</p>
+            </div>
           </div>
-          <div class="card-body">
-            <table class="table table-striped table-bordered" id="customerTable">
-              <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Actions</th></tr></thead>
+          <div class="col-md-3">
+            <div class="p-3 bg-white summary-card text-center">
+              <h5>Total Vehicles</h5>
+              <p id="sumVehicles" class="fs-3 mb-0">0</p>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 bg-white summary-card text-center">
+              <h5>Open Invoices</h5>
+              <p id="sumInvoices" class="fs-3 mb-0">0</p>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 bg-white summary-card text-center">
+              <h5>Pending Orders</h5>
+              <p id="sumOrders" class="fs-3 mb-0">0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Customers Tab -->
+      <div id="tab-customers" class="tab-section d-none">
+        <div class="card p-4 mb-4">
+          <div class="d-flex justify-content-between mb-3">
+            <h3>Customers</h3>
+            <button class="btn btn-primary" onclick="openCustomer()"><i class="fas fa-plus"></i> Add Customer</button>
+          </div>
+          <div class="table-responsive">
+            <table id="customerTable" class="table table-striped table-bordered">
+              <thead class="table-light">
+                <tr>
+                  <th data-col="name">Name</th>
+                  <th data-col="phone">Phone</th>
+                  <th data-col="email">Email</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
               <tbody></tbody>
             </table>
           </div>
+          <nav><ul id="custPagination" class="pagination justify-content-center"></ul></nav>
         </div>
       </div>
 
-      <!-- VEHICLES TAB -->
-      <div class="tab-pane fade" id="vehicles" role="tabpanel">
-        <div class="card mt-3">
-          <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-            <span><i class="fas fa-car"></i> Vehicles</span>
-            <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addVehicleModal"><i class="fas fa-plus"></i> Add Vehicle</button>
+      <!-- Vehicles Tab -->
+      <div id="tab-vehicles" class="tab-section d-none">
+        <div class="card p-4 mb-4">
+          <div class="d-flex justify-content-between mb-3">
+            <h3>Vehicles</h3>
+            <button class="btn btn-success" onclick="openVehicle()"><i class="fas fa-plus"></i> Add Vehicle</button>
           </div>
-          <div class="card-body">
-            <table class="table table-striped table-bordered" id="vehicleTable">
-              <thead><tr><th>Owner</th><th>VIN</th><th>Make/Model</th><th>Year</th><th>Actions</th></tr></thead>
+          <div class="table-responsive">
+            <table id="vehicleTable" class="table table-striped table-bordered">
+              <thead class="table-light">
+                <tr>
+                  <th data-col="customer">Owner</th>
+                  <th data-col="vin">VIN</th>
+                  <th data-col="make">Make</th>
+                  <th data-col="model">Model</th>
+                  <th data-col="year">Year</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
               <tbody></tbody>
             </table>
           </div>
+          <nav><ul id="vehPagination" class="pagination justify-content-center"></ul></nav>
         </div>
       </div>
 
-      <!-- WORK ORDERS TAB -->
-      <div class="tab-pane fade" id="orders" role="tabpanel">
-        <div class="card mt-3">
-          <div class="card-header bg-warning d-flex justify-content-between align-items-center">
-            <span><i class="fas fa-tools"></i> Work Orders</span>
-            <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addOrderModal"><i class="fas fa-plus"></i> Create Order</button>
+      <!-- Work Orders Tab -->
+      <div id="tab-orders" class="tab-section d-none">
+        <div class="card p-4 mb-4">
+          <div class="d-flex justify-content-between mb-3">
+            <h3>Work Orders</h3>
+            <button class="btn btn-warning" onclick="openOrder()"><i class="fas fa-plus"></i> Add Order</button>
           </div>
-          <div class="card-body">
-            <table class="table table-striped table-bordered" id="orderTable">
-              <thead><tr><th>Vehicle</th><th>Description</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+          <div class="table-responsive">
+            <table id="orderTable" class="table table-striped table-bordered">
+              <thead class="table-light">
+                <tr>
+                  <th data-col="vehicle">Vehicle</th>
+                  <th data-col="description">Description</th>
+                  <th data-col="status">Status</th>
+                  <th data-col="date">Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
               <tbody></tbody>
             </table>
           </div>
+          <nav><ul id="ordPagination" class="pagination justify-content-center"></ul></nav>
         </div>
       </div>
 
-      <!-- DIAGNOSTICS TAB -->
-      <div class="tab-pane fade" id="diagnostics" role="tabpanel">
-        <div class="card mt-3">
-          <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-            <span><i class="fas fa-microchip"></i> Diagnostic Logs</span>
-            <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addDiagnosticModal"><i class="fas fa-plus"></i> New Log</button>
+      <!-- Diagnostics Tab -->
+      <div id="tab-diagnostics" class="tab-section d-none">
+        <div class="card p-4 mb-4">
+          <div class="d-flex justify-content-between mb-3">
+            <h3>Diagnostics</h3>
+            <button class="btn btn-info" onclick="openDiag()"><i class="fas fa-plus"></i> Add Diagnostic</button>
           </div>
-          <div class="card-body">
-            <table class="table table-striped table-bordered" id="diagnosticTable">
-              <thead><tr><th>Vehicle</th><th>Symptoms</th><th>Error Codes</th><th>Date</th><th>Actions</th></tr></thead>
+          <div class="table-responsive">
+            <table id="diagTable" class="table table-striped table-bordered">
+              <thead class="table-light">
+                <tr>
+                  <th data-col="vehicle">Vehicle</th>
+                  <th data-col="symptoms">Symptoms</th>
+                  <th data-col="codes">Codes</th>
+                  <th data-col="date">Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
               <tbody></tbody>
             </table>
           </div>
+          <nav><ul id="diagPagination" class="pagination justify-content-center"></ul></nav>
         </div>
       </div>
 
-      <!-- INVOICES TAB -->
-      <div class="tab-pane fade" id="invoices" role="tabpanel">
-        <div class="card mt-3">
-          <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
-            <span><i class="fas fa-file-invoice-dollar"></i> Invoices</span>
-            <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addInvoiceModal"><i class="fas fa-plus"></i> New Invoice</button>
+      <!-- Invoices Tab -->
+      <div id="tab-invoices" class="tab-section d-none">
+        <div class="card p-4 mb-4">
+          <div class="d-flex justify-content-between mb-3">
+            <h3>Invoices</h3>
+            <button class="btn btn-danger" onclick="openInvoice()"><i class="fas fa-plus"></i> Add Invoice</button>
           </div>
-          <div class="card-body">
-            <table class="table table-striped table-bordered" id="invoiceTable">
-              <thead><tr><th>Vehicle</th><th>Total</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+          <div class="table-responsive">
+            <table id="invoiceTable" class="table table-striped table-bordered">
+              <thead class="table-light">
+                <tr>
+                  <th data-col="customer">Customer</th>
+                  <th data-col="vehicle">Vehicle</th>
+                  <th data-col="total">Total</th>
+                  <th data-col="date">Date</th>
+                  <th data-col="status">Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
               <tbody></tbody>
             </table>
           </div>
+          <nav><ul id="invPagination" class="pagination justify-content-center"></ul></nav>
         </div>
       </div>
 
-      <!-- REPORTS TAB -->
-      <div class="tab-pane fade" id="reports" role="tabpanel">
-        <div class="card mt-3">
-          <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-            <span><i class="fas fa-file-alt"></i> Technical Reports</span>
-            <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addReportModal"><i class="fas fa-plus"></i> Generate Report</button>
+      <!-- Reports Tab -->
+      <div id="tab-reports" class="tab-section d-none">
+        <div class="card p-4 mb-4">
+          <div class="d-flex justify-content-between mb-3">
+            <h3>Reports</h3>
+            <button class="btn btn-dark" onclick="openReport()"><i class="fas fa-plus"></i> Add Report</button>
           </div>
-          <div class="card-body">
-            <table class="table table-striped table-bordered" id="reportTable">
-              <thead><tr><th>Vehicle</th><th>Date</th><th>Technician</th><th>Actions</th></tr></thead>
+          <div class="table-responsive">
+            <table id="reportTable" class="table table-striped table-bordered">
+              <thead class="table-light">
+                <tr>
+                  <th data-col="customer">Customer</th>
+                  <th data-col="vehicle">Vehicle</th>
+                  <th data-col="date">Date</th>
+                  <th data-col="technician">Technician</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
               <tbody></tbody>
             </table>
           </div>
+          <nav><ul id="repPagination" class="pagination justify-content-center"></ul></nav>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- MODALS -->
-  <!-- Add Customer Modal -->
-  <div class="modal fade" id="addCustomerModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title">Add New Customer</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="customerForm">
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label class="form-label">Name</label>
-                <input type="text" class="form-control" required>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Email</label>
-                <input type="email" class="form-control">
-              </div>
+      <!-- Export Tab -->
+      <div id="tab-export" class="tab-section d-none">
+        <div class="card p-4">
+          <h3>Export Data</h3>
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="form-label">Customer</label>
+              <select id="exportCustomer" class="form-select"></select>
             </div>
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label class="form-label">Phone</label>
-                <input type="text" class="form-control" required>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Address</label>
-                <input type="text" class="form-control">
-              </div>
-            </div>
-            <div class="d-grid gap-2">
-              <button type="submit" class="btn btn-primary">Save Customer</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add Vehicle Modal -->
-  <div class="modal fade" id="addVehicleModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header bg-success text-white">
-          <h5 class="modal-title">Add New Vehicle</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="vehicleForm">
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label class="form-label">Customer</label>
-                <select class="form-select" required>
-                  <option value="">Select Customer</option>
-                </select>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">VIN</label>
-                <input type="text" class="form-control" required>
-              </div>
-            </div>
-            <div class="row mb-3">
-              <div class="col-md-4">
-                <label class="form-label">Make</label>
-                <input type="text" class="form-control" required>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Model</label>
-                <input type="text" class="form-control" required>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Year</label>
-                <input type="number" class="form-control" required>
-              </div>
-            </div>
-            <div class="d-grid gap-2">
-              <button type="submit" class="btn btn-success">Save Vehicle</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add Order Modal -->
-  <div class="modal fade" id="addOrderModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header bg-warning">
-          <h5 class="modal-title">Create New Work Order</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="orderForm">
-            <div class="mb-3">
+            <div class="col-md-4">
               <label class="form-label">Vehicle</label>
-              <select class="form-select" required>
-                <option value="">Select Vehicle</option>
-              </select>
+              <select id="exportVehicle" class="form-select"></select>
             </div>
-            <div class="mb-3">
-              <label class="form-label">Description</label>
-              <textarea class="form-control" rows="3" required></textarea>
+            <div class="col-md-4">
+              <label class="form-label">Date</label>
+              <input id="exportDate" type="date" class="form-control">
             </div>
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label class="form-label">Status</label>
-                <select class="form-select">
-                  <option value="Open">Open</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Completed">Completed</option>
-                </select>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Due Date</label>
-                <input type="date" class="form-control">
-              </div>
-            </div>
-            <div class="d-grid gap-2">
-              <button type="submit" class="btn btn-warning">Create Order</button>
-            </div>
-          </form>
+          </div>
+          <button class="btn btn-outline-secondary" onclick="generatePDF()"><i class="fas fa-file-pdf"></i> Generate PDF</button>
         </div>
       </div>
+
     </div>
   </div>
 
-  <!-- Add Diagnostic Modal -->
-  <div class="modal fade" id="addDiagnosticModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header bg-info text-white">
-          <h5 class="modal-title">New Diagnostic Log</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="diagnosticForm">
-            <div class="mb-3">
-              <label class="form-label">Vehicle</label>
-              <select class="form-select" required>
-                <option value="">Select Vehicle</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Symptoms</label>
-              <textarea class="form-control" rows="2" required></textarea>
-            </div>
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label class="form-label">OBD-II Codes (optional)</label>
-                <input type="text" class="form-control">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Mechanic Notes</label>
-                <input type="text" class="form-control">
-              </div>
-            </div>
-            <div class="d-grid gap-2">
-              <button type="submit" class="btn btn-info">Save Diagnostic</button>
-            </div>
-          </form>
-        </div>
+  <!-- Modals -->
+  <!-- Customer Modal -->
+  <div class="modal fade" id="customerModal"><div class="modal-dialog"><form id="customerForm" class="modal-content">
+    <div class="modal-header bg-primary text-white">
+      <h5 id="custModalTitle">Add Customer</h5>
+      <button type="button" class="btn-close" onclick="custModal.hide()"></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="custId">
+      <div class="mb-3"><label>Name</label><input id="custName" class="form-control" required></div>
+      <div class="mb-3"><label>Phone</label><input id="custPhone" class="form-control" required></div>
+      <div class="mb-3"><label>Email</label><input id="custEmail" type="email" class="form-control"></div>
+    </div>
+    <div class="modal-footer"><button type="submit" id="custSaveBtn" class="btn btn-primary w-100">Save</button></div>
+  </form></div></div>
+  <!-- Vehicle Modal -->
+  <div class="modal fade" id="vehicleModal"><div class="modal-dialog"><form id="vehicleForm" class="modal-content">
+    <div class="modal-header bg-success text-white">
+      <h5 id="vehModalTitle">Add Vehicle</h5>
+      <button type="button" class="btn-close" onclick="vehModal.hide()"></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="vehId">
+      <div class="mb-3"><label>Owner</label><select id="vehOwner" class="form-select" required></select></div>
+      <div class="mb-3"><label>VIN</label><input id="vehVin" class="form-control" required></div>
+      <div class="row">
+        <div class="col mb-3"><label>Make</label><input id="vehMake" class="form-control" required></div>
+        <div class="col mb-3"><label>Model</label><input id="vehModel" class="form-control" required></div>
+        <div class="col mb-3"><label>Year</label><input id="vehYear" type="number" class="form-control" required></div>
       </div>
     </div>
-  </div>
-
-  <!-- Add Invoice Modal -->
-  <div class="modal fade" id="addInvoiceModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header bg-danger text-white">
-          <h5 class="modal-title">New Invoice</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="invoiceForm">
-            <div class="mb-3">
-              <label class="form-label">Vehicle</label>
-              <select class="form-select" required>
-                <option value="">Select Vehicle</option>
-              </select>
-            </div>
-            <div class="row mb-3">
-              <div class="col-md-4">
-                <label class="form-label">Labor Hours</label>
-                <input type="number" step="0.1" class="form-control" value="1">
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Hourly Rate ($)</label>
-                <input type="number" step="0.01" class="form-control" value="85">
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Parts Total ($)</label>
-                <input type="number" step="0.01" class="form-control" value="0">
-              </div>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Notes</label>
-              <textarea class="form-control" rows="2"></textarea>
-            </div>
-            <div class="d-grid gap-2">
-              <button type="submit" class="btn btn-danger">Generate Invoice</button>
-            </div>
-          </form>
-        </div>
+    <div class="modal-footer"><button type="submit" id="vehSaveBtn" class="btn btn-success w-100">Save</button></div>
+  </form></div></div>
+  <!-- Order Modal -->
+  <div class="modal fade" id="orderModal"><div class="modal-dialog"><form id="orderForm" class="modal-content">
+    <div class="modal-header bg-warning text-dark">
+      <h5 id="ordModalTitle">Add Work Order</h5>
+      <button type="button" class="btn-close" onclick="ordModal.hide()"></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ordId">
+      <div class="mb-3"><label>Vehicle</label><select id="ordVehicle" class="form-select" required></select></div>
+      <div class="mb-3"><label>Description</label><textarea id="ordDesc" class="form-control" required></textarea></div>
+      <div class="row">
+        <div class="col mb-3"><label>Status</label><select id="ordStatus" class="form-select"><option>Open</option><option>In Progress</option><option>Completed</option></select></div>
+        <div class="col mb-3"><label>Date</label><input id="ordDate" type="date" class="form-control"></div>
       </div>
     </div>
-  </div>
-
-  <!-- Add Report Modal -->
-  <div class="modal fade" id="addReportModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-      <div class="modal-content">
-        <div class="modal-header bg-dark text-white">
-          <h5 class="modal-title">Generate Technical Report</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="reportForm">
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label class="form-label">Vehicle</label>
-                <select class="form-select" required>
-                  <option value="">Select Vehicle</option>
-                </select>
-              </div>
-              <div class="col-md-3">
-                <label class="form-label">Date</label>
-                <input type="date" class="form-control" value="${new Date().toISOString().split('T')[0]}" required>
-              </div>
-              <div class="col-md-3">
-                <label class="form-label">Technician</label>
-                <input type="text" class="form-control" placeholder="Technician Name" required>
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Customer Complaint / Symptoms</label>
-              <textarea class="form-control" rows="3" readonly></textarea>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Diagnostic Results</label>
-              <textarea class="form-control" rows="4" placeholder="Describe engine performance, error codes, test results..."></textarea>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Recommended Services</label>
-              <textarea class="form-control" rows="4" placeholder="List suggested repairs or maintenance tasks..."></textarea>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Additional Notes</label>
-              <textarea class="form-control" rows="3" placeholder="Include any other relevant observations..."></textarea>
-            </div>
-
-            <div class="d-grid gap-2">
-              <button type="submit" class="btn btn-dark">Save Report</button>
-            </div>
-          </form>
-        </div>
-      </div>
+    <div class="modal-footer"><button type="submit" id="ordSaveBtn" class="btn btn-warning w-100">Save</button></div>
+  </form></div></div>
+  <!-- Diagnostic Modal -->
+  <div class="modal fade" id="diagModal"><div class="modal-dialog"><form id="diagForm" class="modal-content">
+    <div class="modal-header bg-info text-white">
+      <h5 id="diagModalTitle">Add Diagnostic</h5>
+      <button type="button" class="btn-close" onclick="diagModal.hide()"></button>
     </div>
-  </div>
+    <div class="modal-body">
+      <input type="hidden" id="diagId">
+      <div class="mb-3"><label>Vehicle</label><select id="diagVehicle" class="form-select" required></select></div>
+      <div class="mb-3"><label>Symptoms</label><textarea id="diagSym" class="form-control" required></textarea></div>
+      <div class="mb-3"><label>Codes</label><input id="diagCodes" class="form-control"></div>
+      <div class="mb-3"><label>Date</label><input id="diagDate" type="date" class="form-control"></div>
+    </div>
+    <div class="modal-footer"><button type="submit" id="diagSaveBtn" class="btn btn-info w-100">Save</button></div>
+  </form></div></div>
+  <!-- Invoice Modal -->
+  <div class="modal fade" id="invoiceModal"><div class="modal-dialog"><form id="invoiceForm" class="modal-content">
+    <div class="modal-header bg-danger text-white">
+      <h5 id="invModalTitle">Add Invoice</h5>
+      <button type="button" class="btn-close" onclick="invModal.hide()"></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="invId">
+      <div class="mb-3"><label>Customer</label><select id="invCustomer" class="form-select" required></select></div>
+      <div class="mb-3"><label>Vehicle</label><select id="invVehicle" class="form-select" required></select></div>
+      <div class="row">
+        <div class="col mb-3"><label>Labor hrs</label><input id="invLabor" type="number" step="0.1" class="form-control" value="1" required></div>
+        <div class="col mb-3"><label>Rate $</label><input id="invRate" type="number" step="0.01" class="form-control" value="85" required></div>
+        <div class="col mb-3"><label>Parts $</label><input id="invParts" type="number" step="0.01" class="form-control" value="0"></div>
+      </div>
+      <div class="mb-3"><label>Date</label><input id="invDate" type="date" class="form-control"></div>
+    </div>
+    <div class="modal-footer"><button type="submit" id="invSaveBtn" class="btn btn-danger w-100">Save</button></div>
+  </form></div></div>
+  <!-- Report Modal -->
+  <div class="modal fade" id="reportModal"><div class="modal-dialog modal-xl"><form id="reportForm" class="modal-content">
+    <div class="modal-header bg-dark text-white">
+      <h5 id="repModalTitle">Add Report</h5>
+      <button type="button" class="btn-close" onclick="repModal.hide()"></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="repId">
+      <div class="row mb-3">
+        <div class="col"><label>Customer</label><select id="repCustomer" class="form-select" required></select></div>
+        <div class="col"><label>Vehicle</label><select id="repVehicle" class="form-select" required></select></div>
+        <div class="col"><label>Date</label><input id="repDate" type="date" class="form-control"></div>
+        <div class="col"><label>Technician</label><input id="repTech" class="form-control"></div>
+      </div>
+      <div class="mb-3"><label>Details</label><textarea id="repDetails" class="form-control" rows="4"></textarea></div>
+    </div>
+    <div class="modal-footer"><button type="submit" id="repSaveBtn" class="btn btn-dark w-100">Save</button></div>
+  </form></div></div>
 
-  <!-- Bootstrap JS + Popper -->
+  <div class="toast-container"></div>
+  <div class="signature">Made by your A+ student: Ghazi Al-Momani</div>
+
+  <!-- Dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- Main Script -->
   <script>
-    // Load or initialize data
-    let data = JSON.parse(localStorage.getItem('shopData') || '{}');
-    const defaultData = {
-      customers: [],
-      vehicles: [],
-      orders: [],
-      diagnostics: [],
-      invoices: [],
-      reports: []
-    };
-    for (const key in defaultData) {
-      if (!data[key]) data[key] = defaultData[key];
+    // Date helpers
+    function formatDate(d) {
+      const [y, m, day] = d.split('-');
+      return `${day}/${m}/${y}`;
+    }
+    function todayISO() {
+      return new Date().toISOString().slice(0, 10);
     }
 
-    function saveData() {
+    // Load data
+    let data = JSON.parse(localStorage.getItem('shopData')||'{}');
+    ['customers','vehicles','orders','diagnostics','invoices','reports'].forEach(k=>data[k]=data[k]||[]);
+
+    // Summary
+    function renderSummary(){
+      document.getElementById('sumCustomers').textContent = data.customers.length;
+      document.getElementById('sumVehicles').textContent = data.vehicles.length;
+      document.getElementById('sumInvoices').textContent = data.invoices.filter(i=>!i.paid).length;
+      document.getElementById('sumOrders').textContent = data.orders.filter(o=>o.status!=='Completed').length;
+    }
+
+    // Save + toast
+    function saveAndToast(msg='Saved!'){
       localStorage.setItem('shopData', JSON.stringify(data));
+      const t = document.createElement('div');
+      t.className='toast align-items-center text-bg-primary border-0';
+      t.role='alert'; t.innerHTML=`
+        <div class="d-flex">
+          <div class="toast-body">${msg}</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>`;
+      document.querySelector('.toast-container').append(t);
+      new bootstrap.Toast(t,{delay:2000}).show();
+      renderSummary();
+      setupTables();
+      setupExportCustomerSelect();
+      setupExportVehicleSelect();
     }
 
-    // Helper Functions
-    function getCustomerName(id) {
-      const cust = data.customers.find(c => c.id === id);
-      return cust ? `${cust.name} (${cust.phone})` : "Unknown";
+    // Renderers (as before)...
+    const renderCustomer = c => `
+      <td>${c.name}</td><td>${c.phone}</td><td>${c.email||''}</td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-outline-info me-1" onclick="openCustomer('${c.id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteCustomer('${c.id}')"><i class="fas fa-trash"></i></button>
+      </td>`;
+    const renderVehicle = v => `
+      <td>${(data.customers.find(c=>c.id===v.customerId)||{}).name||''}</td>
+      <td>${v.vin}</td><td>${v.make}</td><td>${v.model}</td><td>${v.year}</td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-outline-info me-1" onclick="openVehicle('${v.id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteVehicle('${v.id}')"><i class="fas fa-trash"></i></button>
+      </td>`;
+    const renderOrder = o => `
+      <td>${(data.vehicles.find(v=>v.id===o.vehicleId)||{}).make} ${(data.vehicles.find(v=>v.id===o.vehicleId)||{}).model}</td>
+      <td>${o.description}</td><td>${o.status}</td><td>${formatDate(o.date)}</td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-outline-info me-1" onclick="openOrder('${o.id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteOrder('${o.id}')"><i class="fas fa-trash"></i></button>
+      </td>`;
+    const renderDiagnostic = d => `
+      <td>${(data.vehicles.find(v=>v.id===d.vehicleId)||{}).make} ${(data.vehicles.find(v=>v.id===d.vehicleId)||{}).model}</td>
+      <td>${d.symptoms}</td><td>${d.codes||''}</td><td>${formatDate(d.date)}</td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-outline-info me-1" onclick="openDiag('${d.id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteDiag('${d.id}')"><i class="fas fa-trash"></i></button>
+      </td>`;
+    const renderInvoice = i => `
+      <td>${(data.customers.find(c=>c.id===i.customerId)||{}).name||''}</td>
+      <td>${(data.vehicles.find(v=>v.id===i.vehicleId)||{}).make} ${(data.vehicles.find(v=>v.id===i.vehicleId)||{}).model}</td>
+      <td>$${i.total.toFixed(2)}</td><td>${formatDate(i.date)}</td><td>${i.paid?'Paid':'Unpaid'}</td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-outline-info me-1" onclick="openInvoice('${i.id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteInvoice('${i.id}')"><i class="fas fa-trash"></i></button>
+      </td>`;
+    const renderReport = r => `
+      <td>${(data.customers.find(c=>c.id===r.customerId)||{}).name||''}</td>
+      <td>${(data.vehicles.find(v=>v.id===r.vehicleId)||{}).make} ${(data.vehicles.find(v=>v.id===r.vehicleId)||{}).model}</td>
+      <td>${formatDate(r.date)}</td><td>${r.technician}</td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-outline-info me-1" onclick="openReport('${r.id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteReport('${r.id}')"><i class="fas fa-trash"></i></button>
+      </td>`;
+
+    // Table setup
+    function setupTable(id,getArr,renderFn,pagId){
+      const tbody=document.querySelector('#'+id+' tbody'), pag=document.getElementById(pagId);
+      let page=1, per=10, sortCol=null, asc=true;
+      function render(){
+        let arr=[...getArr()];
+        if(sortCol){
+          arr.sort((a,b)=>{
+            let va=(''+a[sortCol]).toLowerCase(), vb=(''+b[sortCol]).toLowerCase();
+            return (va>vb?1:-1)*(asc?1:-1);
+          });
+        }
+        const total=Math.ceil(arr.length/per);
+        pag.innerHTML = '';
+        for(let i=1;i<=total;i++){
+          pag.innerHTML += `<li class="page-item ${i===page?'active':''}"><a class="page-link">${i}</a></li>`;
+        }
+        pag.querySelectorAll('a').forEach((a,i)=>a.onclick=e=>{page=i+1;render();});
+        tbody.innerHTML = '';
+        arr.slice((page-1)*per,page*per).forEach(r=>tbody.insertRow().innerHTML=renderFn(r));
+      }
+      document.querySelectorAll(`#${id} th[data-col]`).forEach(th=>{
+        th.onclick = ()=>{
+          const col = th.dataset.col;
+          if(sortCol===col) asc=!asc; else{ sortCol=col; asc=true; }
+          render();
+        };
+      });
+      render();
+    }
+    function setupTables(){
+      setupTable('customerTable', ()=>data.customers, renderCustomer, 'custPagination');
+      setupTable('vehicleTable', ()=>data.vehicles, renderVehicle, 'vehPagination');
+      setupTable('orderTable', ()=>data.orders, renderOrder, 'ordPagination');
+      setupTable('diagTable', ()=>data.diagnostics, renderDiagnostic, 'diagPagination');
+      setupTable('invoiceTable', ()=>data.invoices, renderInvoice, 'invPagination');
+      setupTable('reportTable', ()=>data.reports, renderReport, 'repPagination');
     }
 
-    function getVehicleInfo(id) {
-      const veh = data.vehicles.find(v => v.id === id);
-      return veh ? `${veh.vin} - ${veh.make} ${veh.model} ${veh.year}` : "Unknown";
-    }
+    // Sidebar & tabs & search (unchanged)...
 
-    // Populate Dropdowns
-    function populateDropdowns() {
-      document.querySelectorAll('#vehicleForm select').forEach(select => {
-        select.innerHTML = '<option value="">Select Customer</option>';
-        data.customers.forEach((cust, index) => {
-          const opt = document.createElement('option');
-          opt.value = cust.id;
-          opt.textContent = `${cust.name} (${cust.phone})`;
-          select.appendChild(opt);
-        });
-      });
-
-      document.querySelectorAll('#orderForm select, #diagnosticForm select, #invoiceForm select, #reportForm select').forEach(select => {
-        select.innerHTML = '<option value="">Select Vehicle</option>';
-        data.vehicles.forEach(veh => {
-          const opt = document.createElement('option');
-          opt.value = veh.id;
-          opt.textContent = `${veh.vin} - ${veh.make} ${veh.model} ${veh.year}`;
-          select.appendChild(opt);
-        });
-      });
-    }
-
-    // Render Tables
-    function renderTables() {
-      // Customers Table
-      const custBody = document.querySelector('#customerTable tbody');
-      custBody.innerHTML = '';
-      data.customers.forEach(cust => {
-        const row = custBody.insertRow();
-        row.insertCell(0).textContent = cust.name;
-        row.insertCell(1).textContent = cust.phone;
-        row.insertCell(2).textContent = cust.email || '-';
-        const actions = row.insertCell(3);
-        actions.innerHTML = `
-          <button class="btn btn-sm btn-outline-danger" onclick="deleteCustomer('${cust.id}')">Delete</button>`;
-      });
-
-      // Vehicles Table
-      const vehBody = document.querySelector('#vehicleTable tbody');
-      vehBody.innerHTML = '';
-      data.vehicles.forEach(veh => {
-        const row = vehBody.insertRow();
-        row.insertCell(0).textContent = getCustomerName(veh.customerId);
-        row.insertCell(1).textContent = veh.vin;
-        row.insertCell(2).textContent = `${veh.make} ${veh.model}`;
-        row.insertCell(3).textContent = veh.year;
-        const actions = row.insertCell(4);
-        actions.innerHTML = `
-          <button class="btn btn-sm btn-outline-danger" onclick="deleteVehicle('${veh.id}')">Delete</button>`;
-      });
-
-      // Work Orders Table
-      const ordBody = document.querySelector('#orderTable tbody');
-      ordBody.innerHTML = '';
-      data.orders.forEach(ord => {
-        const row = ordBody.insertRow();
-        row.insertCell(0).textContent = getVehicleInfo(ord.vehicleId);
-        row.insertCell(1).textContent = ord.description;
-        row.insertCell(2).textContent = ord.status;
-        row.insertCell(3).textContent = ord.date;
-        const actions = row.insertCell(4);
-        actions.innerHTML = `
-          <button class="btn btn-sm btn-outline-danger" onclick="deleteOrder('${ord.id}')">Delete</button>`;
-      });
-
-      // Diagnostics Table
-      const diagBody = document.querySelector('#diagnosticTable tbody');
-      diagBody.innerHTML = '';
-      data.diagnostics.forEach(diag => {
-        const row = diagBody.insertRow();
-        row.insertCell(0).textContent = getVehicleInfo(diag.vehicleId);
-        row.insertCell(1).textContent = diag.symptoms;
-        row.insertCell(2).textContent = diag.codes || '-';
-        row.insertCell(3).textContent = diag.date;
-        const actions = row.insertCell(4);
-        actions.innerHTML = `
-          <button class="btn btn-sm btn-outline-danger" onclick="deleteDiagnostic('${diag.id}')">Delete</button>`;
-      });
-
-      // Invoices Table
-      const invBody = document.querySelector('#invoiceTable tbody');
-      invBody.innerHTML = '';
-      data.invoices.forEach(inv => {
-        const row = invBody.insertRow();
-        row.insertCell(0).textContent = getVehicleInfo(inv.vehicleId);
-        row.insertCell(1).textContent = `$${inv.total.toFixed(2)}`;
-        row.insertCell(2).textContent = inv.date;
-        row.insertCell(3).textContent = inv.paid ? "Paid" : "Unpaid";
-        const actions = row.insertCell(4);
-        actions.innerHTML = `
-          <button class="btn btn-sm btn-outline-secondary" onclick="toggleInvoicePayment('${inv.id}')">${inv.paid ? 'Mark Unpaid' : 'Mark Paid'}</button>
-          <button class="btn btn-sm btn-outline-danger" onclick="deleteInvoice('${inv.id}')">Delete</button>`;
-      });
-
-      // Reports Table
-      const repBody = document.querySelector('#reportTable tbody');
-      repBody.innerHTML = '';
-      data.reports.forEach(rep => {
-        const row = repBody.insertRow();
-        row.insertCell(0).textContent = getVehicleInfo(rep.vehicleId);
-        row.insertCell(1).textContent = rep.date;
-        row.insertCell(2).textContent = rep.technician;
-        const actions = row.insertCell(3);
-        actions.innerHTML = `
-          <button class="btn btn-sm btn-outline-primary" onclick="viewReport('${rep.id}')"><i class="fas fa-print"></i> Print</button>
-          <button class="btn btn-sm btn-outline-success" onclick="sendReport('${rep.id}')"><i class="fas fa-envelope"></i> Send</button>
-          <button class="btn btn-sm btn-outline-danger" onclick="deleteReport('${rep.id}')">Delete</button>`;
-      });
-    }
-
-    // Generate Unique ID
-    function generateID() {
-      return Math.random().toString(36).substr(2, 9);
-    }
-
-    // Event Listeners
-    document.getElementById('customerForm').addEventListener('submit', e => {
-      e.preventDefault();
-      const form = e.target;
-      const customer = {
-        id: generateID(),
-        name: form[0].value.trim(),
-        email: form[1].value.trim(),
-        phone: form[2].value.trim(),
-        address: form[3].value.trim()
+    const sb=document.getElementById('sidebar');
+    document.getElementById('toggleBtn').onclick=()=>{
+      sb.classList.toggle('expanded');
+      localStorage.setItem('sidebarExpanded', sb.classList.contains('expanded'));
+    };
+    if(localStorage.getItem('sidebarExpanded')==='true') sb.classList.add('expanded');
+    document.querySelectorAll('#menu .nav-link').forEach(a=>{
+      a.onclick=e=>{
+        e.preventDefault();
+        document.querySelectorAll('#menu .nav-link').forEach(x=>x.classList.remove('active'));
+        a.classList.add('active');
+        document.querySelectorAll('.tab-section').forEach(s=>s.classList.add('d-none'));
+        document.getElementById('tab-'+a.dataset.tab).classList.remove('d-none');
+        applySearch();
       };
-      data.customers.push(customer);
-      saveData();
-      populateDropdowns();
-      renderTables();
-      bootstrap.Modal.getInstance(document.getElementById('addCustomerModal')).hide();
-      alert('Customer added!');
     });
+    const searchInput=document.getElementById('globalSearch');
+    function applySearch(){
+      const q=searchInput.value.toLowerCase();
+      document.querySelectorAll('.tab-section:not(.d-none) table tbody tr').forEach(r=>{
+        r.style.display = r.textContent.toLowerCase().includes(q)?'':'none';
+      });
+    }
+    searchInput.addEventListener('input',applySearch);
+    searchInput.addEventListener('keydown',e=>{ if(e.key==='Enter') applySearch(); });
 
-    document.getElementById('vehicleForm').addEventListener('submit', e => {
+    // CRUD & modals (as before)...
+
+    // Customers
+    const custModal = new bootstrap.Modal('#customerModal');
+    document.getElementById('customerForm').onsubmit = e => {
       e.preventDefault();
-      const form = e.target;
-      const vehicle = {
-        id: generateID(),
-        customerId: form[0].value,
-        vin: form[1].value.trim(),
-        make: form[2].value.trim(),
-        model: form[3].value.trim(),
-        year: parseInt(form[4].value)
+      const btn = document.getElementById('custSaveBtn');
+      btn.disabled = true;
+      const id = document.getElementById('custId').value || Math.random().toString(36).slice(2);
+      const obj = {
+        id,
+        name: document.getElementById('custName').value.trim(),
+        phone: document.getElementById('custPhone').value.trim(),
+        email: document.getElementById('custEmail').value.trim()
       };
-      data.vehicles.push(vehicle);
-      saveData();
-      populateDropdowns();
-      renderTables();
-      bootstrap.Modal.getInstance(document.getElementById('addVehicleModal')).hide();
-      alert('Vehicle added!');
-    });
+      const idx = data.customers.findIndex(x=>x.id===id);
+      idx > -1 ? data.customers[idx]=obj : data.customers.push(obj);
+      saveAndToast();
+      setupVehicleSelect();
+      setupInvoiceSelects();
+      setupReportSelects();
+      custModal.hide();
+    };
+    function openCustomer(id=''){
+      ['custId','custName','custPhone','custEmail'].forEach(f=>document.getElementById(f).value='');
+      if(id){
+        const c = data.customers.find(x=>x.id===id);
+        document.getElementById('custId').value = c.id;
+        document.getElementById('custName').value = c.name;
+        document.getElementById('custPhone').value = c.phone;
+        document.getElementById('custEmail').value = c.email;
+      }
+      custModal.show();
+    }
+    function deleteCustomer(id){
+      if(!confirm('Delete this customer?')) return;
+      data.customers = data.customers.filter(x=>x.id!==id);
+      saveAndToast();
+      setupVehicleSelect();
+      setupInvoiceSelects();
+      setupReportSelects();
+    }
 
-    document.getElementById('orderForm').addEventListener('submit', e => {
+    // Vehicles
+    const vehModal = new bootstrap.Modal('#vehicleModal');
+    document.getElementById('vehicleForm').onsubmit = e => {
       e.preventDefault();
-      const form = e.target;
-      const order = {
-        id: generateID(),
-        vehicleId: form[0].value,
-        description: form[1].value.trim(),
-        status: form[2].value,
-        date: new Date().toLocaleDateString(),
-        dueDate: form[3].value
+      const btn = document.getElementById('vehSaveBtn');
+      btn.disabled = true;
+      const id = document.getElementById('vehId').value || Math.random().toString(36).slice(2);
+      const obj = {
+        id,
+        customerId: document.getElementById('vehOwner').value,
+        vin: document.getElementById('vehVin').value.trim(),
+        make: document.getElementById('vehMake').value.trim(),
+        model: document.getElementById('vehModel').value.trim(),
+        year: document.getElementById('vehYear').value
       };
-      data.orders.push(order);
-      saveData();
-      renderTables();
-      bootstrap.Modal.getInstance(document.getElementById('addOrderModal')).hide();
-      alert('Work order created!');
-    });
+      const idx = data.vehicles.findIndex(x=>x.id===id);
+      idx > -1 ? data.vehicles[idx]=obj : data.vehicles.push(obj);
+      saveAndToast();
+      vehModal.hide();
+    };
+    function openVehicle(id=''){
+      ['vehId','vehVin','vehMake','vehModel','vehYear'].forEach(f=>document.getElementById(f).value='');
+      setupVehicleSelect();
+      if(id){
+        const v = data.vehicles.find(x=>x.id===id);
+        document.getElementById('vehId').value = v.id;
+        document.getElementById('vehOwner').value = v.customerId;
+        document.getElementById('vehVin').value = v.vin;
+        document.getElementById('vehMake').value = v.make;
+        document.getElementById('vehModel').value = v.model;
+        document.getElementById('vehYear').value = v.year;
+      }
+      vehModal.show();
+    }
+    function deleteVehicle(id){
+      if(!confirm('Delete this vehicle?')) return;
+      data.vehicles = data.vehicles.filter(x=>x.id!==id);
+      saveAndToast();
+    }
+    function setupVehicleSelect(){
+      const sel = document.getElementById('vehOwner');
+      sel.innerHTML = '<option value="">Select Owner</option>';
+      data.customers.forEach(c=> sel.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+    }
+    setupVehicleSelect();
 
-    document.getElementById('diagnosticForm').addEventListener('submit', e => {
+    // Orders
+    const ordModal = new bootstrap.Modal('#orderModal');
+    document.getElementById('orderForm').onsubmit = e => {
       e.preventDefault();
-      const form = e.target;
-      const diagnostic = {
-        id: generateID(),
-        vehicleId: form[0].value,
-        symptoms: form[1].value.trim(),
-        codes: form[2].value.trim(),
-        notes: form[3].value.trim(),
-        date: new Date().toLocaleDateString()
+      const btn = document.getElementById('ordSaveBtn');
+      btn.disabled = true;
+      const id = document.getElementById('ordId').value || Math.random().toString(36).slice(2);
+      const obj = {
+        id,
+        vehicleId: document.getElementById('ordVehicle').value,
+        description: document.getElementById('ordDesc').value.trim(),
+        status: document.getElementById('ordStatus').value,
+        date: document.getElementById('ordDate').value || todayISO()
       };
-      data.diagnostics.push(diagnostic);
-      saveData();
-      renderTables();
-      bootstrap.Modal.getInstance(document.getElementById('addDiagnosticModal')).hide();
-      alert('Diagnostic logged!');
-    });
+      const idx = data.orders.findIndex(x=>x.id===id);
+      idx > -1 ? data.orders[idx]=obj : data.orders.push(obj);
+      saveAndToast();
+      ordModal.hide();
+    };
+    function openOrder(id=''){
+      ['ordId','ordDesc','ordStatus','ordDate'].forEach(f=>document.getElementById(f).value='');
+      const sel = document.getElementById('ordVehicle');
+      sel.innerHTML = '<option value="">Select Vehicle</option>';
+      data.vehicles.forEach(v=> sel.innerHTML += `<option value="${v.id}">${v.make} ${v.model}</option>`);
+      if(id){
+        const o = data.orders.find(x=>x.id===id);
+        document.getElementById('ordId').value = o.id;
+        sel.value = o.vehicleId;
+        document.getElementById('ordDesc').value = o.description;
+        document.getElementById('ordStatus').value = o.status;
+        document.getElementById('ordDate').value = o.date;
+      }
+      ordModal.show();
+    }
+    function deleteOrder(id){
+      if(!confirm('Delete this order?')) return;
+      data.orders = data.orders.filter(x=>x.id!==id);
+      saveAndToast();
+    }
 
-    document.getElementById('invoiceForm').addEventListener('submit', e => {
+    // Diagnostics
+    const diagModal = new bootstrap.Modal('#diagModal');
+    document.getElementById('diagForm').onsubmit = e => {
       e.preventDefault();
-      const form = e.target;
-      const laborHours = parseFloat(form[1].value);
-      const hourlyRate = parseFloat(form[2].value);
-      const partsTotal = parseFloat(form[3].value);
-      const total = laborHours * hourlyRate + partsTotal;
+      const btn = document.getElementById('diagSaveBtn');
+      btn.disabled = true;
+      const id = document.getElementById('diagId').value || Math.random().toString(36).slice(2);
+      const obj = {
+        id,
+        vehicleId: document.getElementById('diagVehicle').value,
+        symptoms: document.getElementById('diagSym').value.trim(),
+        codes: document.getElementById('diagCodes').value.trim(),
+        date: document.getElementById('diagDate').value || todayISO()
+      };
+      const idx = data.diagnostics.findIndex(x=>x.id===id);
+      idx > -1 ? data.diagnostics[idx]=obj : data.diagnostics.push(obj);
+      saveAndToast();
+      diagModal.hide();
+    };
+    function openDiag(id=''){
+      ['diagId','diagSym','diagCodes','diagDate'].forEach(f=>document.getElementById(f).value='');
+      const sel = document.getElementById('diagVehicle');
+      sel.innerHTML = '<option value="">Select Vehicle</option>';
+      data.vehicles.forEach(v=> sel.innerHTML += `<option value="${v.id}">${v.make} ${v.model}</option>`);
+      if(id){
+        const d = data.diagnostics.find(x=>x.id===id);
+        document.getElementById('diagId').value = d.id;
+        sel.value = d.vehicleId;
+        document.getElementById('diagSym').value = d.symptoms;
+        document.getElementById('diagCodes').value = d.codes;
+        document.getElementById('diagDate').value = d.date;
+      }
+      diagModal.show();
+    }
+    function deleteDiag(id){
+      if(!confirm('Delete this diagnostic?')) return;
+      data.diagnostics = data.diagnostics.filter(x=>x.id!==id);
+      saveAndToast();
+    }
 
-      const invoice = {
-        id: generateID(),
-        vehicleId: form[0].value,
-        laborHours,
-        hourlyRate,
-        partsTotal,
+    // Invoices
+    const invModal = new bootstrap.Modal('#invoiceModal');
+    function setupInvoiceSelects(){
+      const cs = document.getElementById('invCustomer');
+      cs.innerHTML = '<option value="">Select Customer</option>';
+      data.customers.forEach(c=> cs.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+      cs.onchange = () => {
+        const sv = document.getElementById('invVehicle');
+        sv.innerHTML = '<option value="">Select Vehicle</option>';
+        data.vehicles.filter(v=>v.customerId===cs.value).forEach(v=> sv.innerHTML += `<option value="${v.id}">${v.make} ${v.model}</option>`);
+      };
+    }
+    setupInvoiceSelects();
+    document.getElementById('invoiceForm').onsubmit = e => {
+      e.preventDefault();
+      const btn = document.getElementById('invSaveBtn');
+      btn.disabled = true;
+      const id = document.getElementById('invId').value || Math.random().toString(36).slice(2);
+      const labor = parseFloat(document.getElementById('invLabor').value);
+      const rate  = parseFloat(document.getElementById('invRate').value);
+      const parts = parseFloat(document.getElementById('invParts').value);
+      const total = labor*rate + parts;
+      const obj = {
+        id,
+        customerId: document.getElementById('invCustomer').value,
+        vehicleId: document.getElementById('invVehicle').value,
+        laborHours: labor,
+        hourlyRate: rate,
+        partsTotal: parts,
         total,
         paid: false,
-        notes: form[4].value.trim(),
-        date: new Date().toLocaleDateString()
+        date: document.getElementById('invDate').value || todayISO()
       };
-      data.invoices.push(invoice);
-      saveData();
-      renderTables();
-      bootstrap.Modal.getInstance(document.getElementById('addInvoiceModal')).hide();
-      alert(`Invoice generated! Total: $${total.toFixed(2)}`);
-    });
+      const idx = data.invoices.findIndex(x=>x.id===id);
+      idx > -1 ? data.invoices[idx]=obj : data.invoices.push(obj);
+      saveAndToast();
+      invModal.hide();
+    };
+    function openInvoice(id=''){
+      ['invId','invLabor','invRate','invParts','invDate'].forEach(f=>document.getElementById(f).value='');
+      setupInvoiceSelects();
+      if(id){
+        const i = data.invoices.find(x=>x.id===id);
+        document.getElementById('invId').value = i.id;
+        document.getElementById('invCustomer').value = i.customerId; document.getElementById('invCustomer').onchange();
+        document.getElementById('invVehicle').value = i.vehicleId;
+        document.getElementById('invLabor').value = i.laborHours;
+        document.getElementById('invRate').value = i.hourlyRate;
+        document.getElementById('invParts').value = i.partsTotal;
+        document.getElementById('invDate').value = i.date;
+      }
+      invModal.show();
+    }
+    function deleteInvoice(id){
+      if(!confirm('Delete this invoice?')) return;
+      data.invoices = data.invoices.filter(x=>x.id!==id);
+      saveAndToast();
+    }
 
-    document.getElementById('reportForm').addEventListener('submit', e => {
+    // Reports
+    const repModal = new bootstrap.Modal('#reportModal');
+    function setupReportSelects(){
+      const cs = document.getElementById('repCustomer');
+      cs.innerHTML = '<option value="">Select Customer</option>';
+      data.customers.forEach(c=> cs.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+      cs.onchange = () => {
+        const sv = document.getElementById('repVehicle');
+        sv.innerHTML = '<option value="">Select Vehicle</option>';
+        data.vehicles.filter(v=>v.customerId===cs.value).forEach(v=> sv.innerHTML += `<option value="${v.id}">${v.make} ${v.model}</option>`);
+      };
+    }
+    setupReportSelects();
+    document.getElementById('reportForm').onsubmit = e => {
       e.preventDefault();
-      const form = e.target;
-      const vehicleId = form[0].value;
-      const diag = data.diagnostics.find(d => d.vehicleId === vehicleId);
-      
-      const report = {
-        id: generateID(),
-        vehicleId,
-        date: form[1].value,
-        technician: form[2].value.trim(),
-        symptoms: diag ? diag.symptoms : "",
-        codes: diag ? diag.codes : "",
-        diagnostics: form[4].value.trim(),
-        recommendations: form[5].value.trim(),
-        notes: form[6].value.trim(),
-        status: "Draft"
+      const btn = document.getElementById('repSaveBtn');
+      btn.disabled = true;
+      const id = document.getElementById('repId').value || Math.random().toString(36).slice(2);
+      const obj = {
+        id,
+        customerId: document.getElementById('repCustomer').value,
+        vehicleId: document.getElementById('repVehicle').value,
+        date: document.getElementById('repDate').value || todayISO(),
+        technician: document.getElementById('repTech').value.trim(),
+        details: document.getElementById('repDetails').value.trim()
       };
-      data.reports.push(report);
-      saveData();
-      renderTables();
-      bootstrap.Modal.getInstance(document.getElementById('addReportModal')).hide();
-      alert('Report generated!');
-    });
-
-    // Delete Functions
-    window.deleteCustomer = (id) => {
-      if (confirm("Delete this customer? This will also delete linked vehicles, orders, and invoices.")) {
-        data.vehicles = data.vehicles.filter(v => v.customerId !== id);
-        data.orders = data.orders.filter(o => !data.vehicles.some(v => v.customerId === id && o.vehicleId === v.id));
-        data.diagnostics = data.diagnostics.filter(d => !data.vehicles.some(v => v.customerId === id && d.vehicleId === v.id));
-        data.invoices = data.invoices.filter(i => !data.vehicles.some(v => v.customerId === id && i.vehicleId === v.id));
-        data.customers = data.customers.filter(c => c.id !== id);
-        saveData();
-        populateDropdowns();
-        renderTables();
-      }
+      const idx = data.reports.findIndex(x=>x.id===id);
+      idx > -1 ? data.reports[idx]=obj : data.reports.push(obj);
+      saveAndToast();
+      repModal.hide();
     };
-
-    window.deleteVehicle = (id) => {
-      if (confirm("Delete this vehicle? This will also delete related orders, diagnostics, and invoices.")) {
-        data.orders = data.orders.filter(o => o.vehicleId !== id);
-        data.diagnostics = data.diagnostics.filter(d => d.vehicleId !== id);
-        data.invoices = data.invoices.filter(i => i.vehicleId !== id);
-        data.vehicles = data.vehicles.filter(v => v.id !== id);
-        saveData();
-        populateDropdowns();
-        renderTables();
+    function openReport(id=''){
+      ['repId','repDate','repTech','repDetails'].forEach(f=>document.getElementById(f).value='');
+      setupReportSelects();
+      if(id){
+        const r = data.reports.find(x=>x.id===id);
+        document.getElementById('repId').value = r.id;
+        document.getElementById('repCustomer').value = r.customerId; document.getElementById('repCustomer').onchange();
+        document.getElementById('repVehicle').value = r.vehicleId;
+        document.getElementById('repDate').value = r.date;
+        document.getElementById('repTech').value = r.technician;
+        document.getElementById('repDetails').value = r.details;
       }
-    };
+      repModal.show();
+    }
+    function deleteReport(id){
+      if(!confirm('Delete this report?')) return;
+      data.reports = data.reports.filter(x=>x.id!==id);
+      saveAndToast();
+    }
 
-    window.deleteOrder = (id) => {
-      if (confirm("Delete this work order?")) {
-        data.orders = data.orders.filter(o => o.id !== id);
-        saveData();
-        renderTables();
+    // Export selectors
+    function setupExportCustomerSelect() {
+      const cs = document.getElementById('exportCustomer');
+      cs.innerHTML = '<option value="">All</option>' + data.customers.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+      cs.onchange = setupExportVehicleSelect;
+    }
+    function setupExportVehicleSelect() {
+      const vs = document.getElementById('exportVehicle');
+      const custId = document.getElementById('exportCustomer').value;
+      let list = data.vehicles;
+      if (custId) list = list.filter(v=>v.customerId===custId);
+      vs.innerHTML = '<option value="">All</option>' + list.map(v=>`<option value="${v.id}">${v.make} ${v.model}</option>`).join('');
+    }
+    document.getElementById('exportDate').value = todayISO();
+    setupExportCustomerSelect();
+    setupExportVehicleSelect();
+
+    // Generate combined PDF with filters
+    function generatePDF() {
+      const custId = document.getElementById('exportCustomer').value;
+      const vehId  = document.getElementById('exportVehicle').value;
+      const date   = document.getElementById('exportDate').value;
+      const cust   = custId ? data.customers.find(c=>c.id===custId) : {};
+      const veh    = vehId  ? data.vehicles.find(v=>v.id===vehId) : {};
+      let diags    = data.diagnostics.filter(d=>(!vehId||d.vehicleId===vehId));
+      let reps     = data.reports.filter(r=>(!vehId||r.vehicleId===vehId));
+      let invs     = data.invoices.filter(i=>(!vehId||i.vehicleId===vehId));
+      if (date) {
+        diags = diags.filter(d=>d.date===date);
+        reps  = reps.filter(r=>r.date===date);
+        invs  = invs.filter(i=>i.date===date);
       }
-    };
 
-    window.deleteDiagnostic = (id) => {
-      if (confirm("Delete this diagnostic log?")) {
-        data.diagnostics = data.diagnostics.filter(d => d.id !== id);
-        saveData();
-        renderTables();
-      }
-    };
-
-    window.deleteInvoice = (id) => {
-      if (confirm("Delete this invoice?")) {
-        data.invoices = data.invoices.filter(i => i.id !== id);
-        saveData();
-        renderTables();
-      }
-    };
-
-    window.deleteReport = (id) => {
-      if (confirm("Delete this report?")) {
-        data.reports = data.reports.filter(r => r.id !== id);
-        saveData();
-        renderTables();
-      }
-    };
-
-    window.toggleInvoicePayment = (id) => {
-      const inv = data.invoices.find(i => i.id === id);
-      if (inv) {
-        inv.paid = !inv.paid;
-        saveData();
-        renderTables();
-      }
-    };
-
-    window.viewReport = (id) => {
-      const report = data.reports.find(r => r.id === id);
-      const vehicle = data.vehicles.find(v => v.id === report.vehicleId);
-      const customer = data.customers.find(c => c.id === vehicle.customerId);
-
-      let content = `
-        <style>
-          body { font-family: Arial; }
-          .header { text-align: center; margin-bottom: 30px; }
-          h2 { color: #2c3e50; }
-          pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
-        </style>
-        <div class="header">
-          <h2>Technical Diagnostic Report</h2>
-          <p>${report.date}</p>
+      let doc = document.createElement('div');
+      doc.style.padding = '20px';
+      doc.innerHTML = `
+        <div style="display:flex; align-items:center; margin-bottom:20px;">
+          <img src="logo.png" alt="Logo" style="max-height:50px; margin-right:20px;">
+          <h1>Service Report & Invoice</h1>
         </div>
-        <h4>Customer: ${customer.name} | Phone: ${customer.phone}</h4>
-        <h4>Vehicle: ${vehicle.make} ${vehicle.model} (${vehicle.year}) | VIN: ${vehicle.vin}</h4>
-        <h4>Technician: ${report.technician}</h4>
-        
-        <h4>Customer Complaint:</h4>
-        <pre>${report.symptoms}</pre>
-
-        <h4>Diagnostic Results:</h4>
-        <pre>${report.diagnostics}</pre>
-
-        <h4>Recommended Repairs:</h4>
-        <pre>${report.recommendations}</pre>
-
-        <h4>Additional Notes:</h4>
-        <pre>${report.notes}</pre>
+        <h2>Customer & Vehicle Info</h2>
+        ${custId?`<p><strong>Name:</strong> ${cust.name}</p>
+        <p><strong>Phone:</strong> ${cust.phone}</p>
+        <p><strong>Email:</strong> ${cust.email}</p>`:''}
+        ${vehId?`<p><strong>Vehicle:</strong> ${veh.make} ${veh.model} (${veh.year})</p>`:''}
+        <h2>Diagnostics</h2>
+        <table border="1" cellpadding="5" cellspacing="0" width="100%" style="border-collapse:collapse;">
+          <tr><th>Date</th><th>Symptoms</th><th>Codes</th></tr>
+          ${diags.map(d=>`<tr><td>${formatDate(d.date)}</td><td>${d.symptoms}</td><td>${d.codes||''}</td></tr>`).join('')}
+        </table>
+        <h2 class="mt-4">Technical Reports</h2>
+        <table border="1" cellpadding="5" cellspacing="0" width="100%" style="border-collapse:collapse;">
+          <tr><th>Date</th><th>Technician</th><th>Details</th></tr>
+          ${reps.map(r=>`<tr><td>${formatDate(r.date)}</td><td>${r.technician}</td><td>${r.details||''}</td></tr>`).join('')}
+        </table>
+        <h2 class="mt-4">Invoices</h2>
+        <table border="1" cellpadding="5" cellspacing="0" width="100%" style="border-collapse:collapse;">
+          <tr><th>Date</th><th>Labor hrs</th><th>Rate</th><th>Parts</th><th>Total</th><th>Status</th></tr>
+          ${invs.map(i=>`<tr>
+            <td>${formatDate(i.date)}</td>
+            <td>${i.laborHours}</td>
+            <td>$${i.hourlyRate.toFixed(2)}</td>
+            <td>$${i.partsTotal.toFixed(2)}</td>
+            <td>$${i.total.toFixed(2)}</td>
+            <td>${i.paid?'Paid':'Unpaid'}</td>
+          </tr>`).join('')}
+        </table>
       `;
-      
-      const printWindow = window.open('', '', 'height=600,width=800');
-      printWindow.document.write(content);
-      printWindow.document.close();
-      printWindow.print();
-    };
+      const filename = `report-${new Date().toISOString().replace(/[:.]/g,'-')}.pdf`;
+      html2pdf().set({
+        margin:10,
+        filename,
+        html2canvas:{scale:2},
+        jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+      }).from(doc).save().then(() => {
+        saveAndToast('PDF downloaded.');
+      });
+    }
 
-    window.sendReport = (id) => {
-      alert("This would open your email app with the report attached.");
-    };
+    // Initialize
+    setupTables();
+    renderSummary();
 
-    // Initial Load
-    populateDropdowns();
-    renderTables();
   </script>
 </body>
 </html>
+```
